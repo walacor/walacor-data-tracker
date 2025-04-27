@@ -1,23 +1,66 @@
-from collections import defaultdict
-from typing import Any, Callable
+from encodings.punycode import T
+import threading
+from types import TracebackType
+from typing import Any, Callable, MutableMapping
 
 
 class EventBus:
-    def __init__(self):
-        self._subscribers: dict[str,list[Callable[[Any],None]]] = defaultdict(list)
-    
-    def subscribe(self, event_type:str, handler: Callable[[Any],None])->None:
-        """Register handler to listen for an event_type"""
-        if handler not in self._subscribers[event_type]:
-            self._subscribers[event_type].append(handler)
+    """Lightweight, thread-safe event emitter.
 
-    def publish(self, event_type: str, payload: any)->None:
-        """Send an event instantly to all subscribers"""
-        for handler in self._subscribers.get(event_type, []):
-            handler(payload)
-        
-    def unsubscribe(self, event_type: str, handler: Callable[[Any],None])->None:
-        """Unregister handler from an event_type"""
-        if handler in self._subscribers[event_type]:
-            self._subscribers[event_type].remove(handler)
+    • Synchronous: `publish()` blocks until all callbacks return.  
+    • Exceptions raised by listeners **propagate** to the caller—writers
+      should catch their own errors.
+    """
+    _REGISTRY: MutableMapping[str, list[Callable[..., None]]] = {}
+    _LOCK = threading.RLock()
     
+    def subscribe(self, event: str, callback: T) -> Callable[[], None]:
+        """Register *callback* for *event*.
+
+        Returns a zero-argument function that **unsubscribes** this callback.
+        """        
+        with self._LOCK:
+            self._REGISTRY.setdefault(event, []).append(callback)
+        
+        def _unsubscribe()->None:
+            with self._LOCK:
+                self._REGISTRY.get(event, []).remove(callback)
+        
+        return _unsubscribe
+    
+
+    def unsubscribe(self, callback:T, event: str | None= None)->None:
+        """Remove *callback* from one or all events."""
+        with self._LOCK:
+            if event is not None:
+                if event in self._REGISTRY and callback in self._REGISTRY[event]:
+                    self._REGISTRY[event].remove(callback)
+            else:
+                for listeners in self._REGISTRY.values():
+                    if callback in listeners:
+                        listeners.remove(callback)
+
+    def publish(self, event: str, **payload)->None:
+        """Fire *event*, forwarding all keyword arguments to each listener."""
+        with self._LOCK:
+            listeners = list(self._REGISTRY.get(event,()))
+        for fn in listeners:
+            fn(**payload)
+
+    def __enter__(self) -> "EventBus":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> bool:
+        self.reset()
+        return False  
+    
+  
+    def reset(self) -> None:
+        """Remove **all** listeners (used by unit tests)."""
+        with self._LOCK:
+            self._REGISTRY.clear()
