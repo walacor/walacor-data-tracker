@@ -26,29 +26,26 @@ class Snapshot:
         )
 
 class History:
-    def __init__(self, max_len:int | None)-> None:
-        """Size-bounded, read-only iterable of snapshots."""
+    def __init__(self,max_len: int | None =None)->None:
+        self._buf: Deque[Snapshot] = collections.deque(maxlen= max_len or 1_000) # type: ignore
+        
+    def append(self, snap: Snapshot) -> None:
+        self._buf.append(snap)
 
-        def __init__(self,max_len: int | None =None)->None:
-            self._buf: Deque[Snapshot] = collections.deque(maxlen= max_len or 1_000) # type: ignore
-            
-        def append(self, snap: Snapshot)->None:
-            self._buf.append(snap)
-
-        def __len__(self) -> int: 
-            return len(self._buf)
-        
-        def __iter__(self)->Iterator[Snapshot]:
-            return iter(self._buf)
-        
-        def __getitem__(self, idx: int)->Snapshot:
-            return list(self._buf)[idx]
-        
-        def filter(self, op:str | None = None)-> Iterator[Snapshot]:
-            """Yield snapshots whose ''operation'' matches *op* (or all if *None*)."""
-            for snap in self._buf:
-                if op is None or snap.operation == op:
-                    yield snap
+    def __len__(self) -> int: 
+        return len(self._buf)
+    
+    def __iter__(self)->Iterator[Snapshot]:
+        return iter(self._buf)
+    
+    def __getitem__(self, idx: int)->Snapshot:
+        return list(self._buf)[idx]
+    
+    def filter(self, op:str | None = None)-> Iterator[Snapshot]:
+        """Yield snapshots whose ''operation'' matches *op* (or all if *None*)."""
+        for snap in self._buf:
+            if op is None or snap.operation == op:
+                yield snap
 
 
 class Tracker:
@@ -94,6 +91,6 @@ class Tracker:
         self.history.append(snap)
         global_bus.publish("snapshot.created", snapshot=snap)
 
-        def manual(self, note:str, artifact:Any)->Snapshot| None:
-            """Manually add a snapshot with a free-text *note*."""
-            return self.track(note,artifact)
+    def manual(self, note:str, artifact:Any)->Snapshot| None:
+        """Manually add a snapshot with a free-text *note*."""
+        return self.track(note,artifact)

@@ -8,7 +8,7 @@ from typing import Any
 def utc_now_iso() -> str:
     """Return current UTC timestamp in ISO-8601 with “Z” suffix."""
     return (
-        _dt.datetime.now(_dt.timezone.utc)()
+        _dt.datetime.now(_dt.timezone.utc)
         .replace(tzinfo=_dt.timezone.utc)
         .isoformat(timespec="microseconds")
         .replace("+00:00", "Z")

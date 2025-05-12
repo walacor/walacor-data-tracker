@@ -64,3 +64,5 @@ class EventBus:
         """Remove **all** listeners (used by unit tests)."""
         with self._LOCK:
             self._REGISTRY.clear()
+
+global_bus: EventBus = EventBus()
