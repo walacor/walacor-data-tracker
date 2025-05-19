@@ -1,56 +1,115 @@
+from __future__ import annotations
+
+import contextvars
 import functools
-from core.adapters.base import BaseAdapter
-from core.tracker import Tracker
-import pandas as pd  
 import threading
+from typing import Any
+
+import pandas as pd
+
+from core.adapters.base import BaseAdapter
+from core.tracker       import Tracker
+
+
+# Re-entrancy flag (True while we’re already inside a patched pandas call)
+_inside_call = contextvars.ContextVar("_inside_call", default=False)
 
 
 class PandasAdapter(BaseAdapter):
-    """Capture newly-created * mutated DataFrames."""
+    """
+    Monkey-patch selected DataFrame mutators so each *user-level* transformation
+    produces exactly one snapshot.  Internal helper calls are skipped via the
+    `_inside_call` flag.
+    """
 
     _DF_METHODS: list[str] = [
-        "__setitem__",  
-        "fillna",
-        "dropna",
-        "replace",
-        "rename",
-        "assign",
+    # creators that often run *inside* other ops
+    "copy", "pivot_table", "reset_index",
+
+    # mutators / aggregators
+    "__setitem__", "fillna", "dropna", "replace", "rename",
+    "assign", "merge", "join","set_axis"
     ]
 
-    _originals: dict[str,any]= {}
+    def __init__(self) -> None:
+        super().__init__()
+        self._originals: dict[str, Any] = {}
 
+        self._parent_of: dict[int, str] = {}
+        self._objects:   dict[int, pd.DataFrame] = {}
 
-    def _wrap(self,method_name: str, tracker:Tracker):
-        original = getattr(pd.DataFrame, method_name)
-        self._originals[method_name]= original
+        self._lock = threading.RLock()
+
+    def _remember(self, df: pd.DataFrame, snap_id: str) -> None:
+        oid = id(df)
+        self._parent_of[oid] = snap_id
+        self._objects[oid]   = df  
+
+    def _parent_id(self, df: pd.DataFrame) -> str | None:
+        return self._parent_of.get(id(df))
+
+    def _wrap_df_init(self, tracker: Tracker) -> None:
+        original = pd.DataFrame.__init__
+        self._originals["__init__"] = original
 
         @functools.wraps(original)
-        def wrapper(df_self, *a, **kw):
-            result = original(df_self, *a, **kw)
+        def init_wrapper(df_self: pd.DataFrame, *a, **kw):
+            if _inside_call.get():
+                return original(df_self, *a, **kw)   # nested – ignore
 
-            target = result if isinstance(result, pd.DataFrame) else df_self
-            tracker.track(f"DataFrame.{method_name}", target, *a, **kw)
-            return result
-        
-        setattr(pd.DataFrame, method_name, wrapper)
+            token = _inside_call.set(True)
+            try:
+                original(df_self, *a, **kw)
+                snap = tracker._idempotent_track(
+                    "DataFrame.__init__", df_self, *a, **kw, parents=()
+                )
+                if snap:
+                    with self._lock:
+                        self._remember(df_self, snap.id)
+            finally:
+                _inside_call.reset(token)
 
-    def _wrap_df_init(self, tracker:Tracker) -> None:
-        original_init = pd.DataFrame.__init__
-        self._originals["__init__"] = original_init
+        pd.DataFrame.__init__ = init_wrapper
 
-        @functools.wraps(original_init)
-        def init_wrapper(df_self, *a, **kw):
-            original_init(df_self,*a, **kw)
-            tracker.track("Dataframe.__init__", df_self, *a,**kw)
+    def _wrap(self, name: str, tracker: Tracker) -> None:
+        original = getattr(pd.DataFrame, name)
+        self._originals[name] = original
 
-        pd.DataFrame.__init__= init_wrapper
+        @functools.wraps(original)
+        def wrapper(df_self: pd.DataFrame, *a, **kw):
+            if _inside_call.get():
+                return original(df_self, *a, **kw)   # nested – ignore
+
+            token = _inside_call.set(True)
+            try:
+                parent = self._parent_id(df_self)
+                result = original(df_self, *a, **kw)
+                target = result if isinstance(result, pd.DataFrame) else df_self
+
+                snap = tracker._idempotent_track(
+                    f"DataFrame.{name}",
+                    target,
+                    *a,
+                    **kw,
+                    parents=(parent,) if parent else (),
+                )
+                if snap:
+                    with self._lock:
+                        self._remember(target, snap.id)
+                return result
+            finally:
+                _inside_call.reset(token)
+
+        setattr(pd.DataFrame, name, wrapper)
 
     def _patch(self, tracker: Tracker) -> None:
         self._wrap_df_init(tracker)
-        for name in self._DF_METHODS:
-            self._wrap(name, tracker)
+        for n in self._DF_METHODS:
+            self._wrap(n, tracker)
 
     def _unpatch(self) -> None:
-        for name, fn in self._originals.items():
-            setattr(pd.DataFrame, name, fn)
+        for n, fn in self._originals.items():
+            setattr(pd.DataFrame, n, fn)
         self._originals.clear()
+        self._parent_of.clear()
+        self._objects.clear()

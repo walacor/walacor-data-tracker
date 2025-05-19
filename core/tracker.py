@@ -1,96 +1,101 @@
-import collections
-from dataclasses import dataclass, field
-from typing import Any, Deque, Iterator, Tuple
-from uuid import UUID
-from .events import global_bus
+from __future__ import annotations
 
-from .utils import deepcopy_artifact, generate_uuid, utc_now_iso
+import threading
+from hashlib import blake2b
+from typing import Any, Iterable
 
-
-@dataclass(frozen=True, slots=True)
-class Snapshot:
-    """Immutable capture of a data artifact *after* a transformation."""
-
-    operation: str                      
-    shape: Tuple[int, ...]               
-    args: Tuple[Any, ...] = field(default_factory=tuple, repr=False)
-    kwargs: dict[str, Any] = field(default_factory=dict, repr=False)
-    artifact: Any | None = field(default=None, repr=False)
-
-    id: str = field(default_factory=generate_uuid, init=False)
-    timestamp: str = field(default_factory=utc_now_iso, init=False)
-
-    def __repr__(self) -> str:  
-        return (
-            f"<Snapshot {self.timestamp}, op={self.operation}, shape={self.shape}>"
-        )
-
-class History:
-    def __init__(self,max_len: int | None =None)->None:
-        self._buf: Deque[Snapshot] = collections.deque(maxlen= max_len or 1_000) # type: ignore
-        
-    def append(self, snap: Snapshot) -> None:
-        self._buf.append(snap)
-
-    def __len__(self) -> int: 
-        return len(self._buf)
-    
-    def __iter__(self)->Iterator[Snapshot]:
-        return iter(self._buf)
-    
-    def __getitem__(self, idx: int)->Snapshot:
-        return list(self._buf)[idx]
-    
-    def filter(self, op:str | None = None)-> Iterator[Snapshot]:
-        """Yield snapshots whose ''operation'' matches *op* (or all if *None*)."""
-        for snap in self._buf:
-            if op is None or snap.operation == op:
-                yield snap
+from core.history   import History
+from core.snapshot  import Snapshot
+from .events        import global_bus
 
 
 class Tracker:
-    """Create snapshots and notify subscribers via global event bus"""
-    
-    def __init__(self,max_history: int | None = None)->None:
-        self.history = History(max_len=max_history)
-        self._running=False
+    """Create snapshots and broadcast them on the global event bus."""
 
-    
-    def start(self)->"Tracker":
-        """Enable the tracker (idempotent)"""
-        self._running=True
+    def __init__(self, max_history: int | None = None) -> None:
+        self.history  = History(max_len=max_history)
+        self._running = False
+
+        self._last_fp: dict[int, str] = {}
+        self._fp_lock = threading.RLock()
+
+    def start(self) -> "Tracker":
+        self._running = True
         global_bus.publish("tracker.started")
         return self
-    
-    def stop(self)->None:
-        """Disable the tracker and broadcast a final event"""
-        self._running=False
+
+    def stop(self) -> None:
+        self._running = False
         global_bus.publish("tracker.stopped")
 
-    def track(self, operation: str, artifact:Any, *a:Any, **kw: Any)->Snapshot | None:
-        """Capture *artifact* after performing *operation*
-        
-        returns the created :class:`Snapshot` or ``None`` when the tracker 
-        is not running (so adapters can remain silent).
-        """
+    @staticmethod
+    def _make_fp(op: str, parents: tuple[str, ...],
+                 shape: tuple[int, ...] | None,
+                 args: tuple[Any, ...], kwargs: dict[str, Any]) -> str:
+        h = blake2b(digest_size=16)
+        h.update(op.encode())
+        h.update(",".join(parents).encode())
+        h.update(str(shape).encode())
+        h.update(str(args).encode())
+        h.update(str(sorted(kwargs.items())).encode())
+        return h.hexdigest()
 
+    def _idempotent_track(
+        self,
+        operation: str,
+        artifact:  Any,
+        *args: Any,
+        parents:   Iterable[str] = (),
+        **kwargs: Any,
+    ) -> Snapshot | None:
+        """Adapters call this → creates snapshot *unless* identical to last."""
         if not self._running:
             return None
-        
-        shape = getattr(artifact, "shape",None)
-        if shape is None and hasattr(artifact, "__len___"):
+
+        shape: tuple[int, ...] | None = getattr(artifact, "shape", None)
+        if shape is None and hasattr(artifact, "__len__"):
+            shape = (len(artifact),)
+
+        parent_ids = tuple(str(p) for p in parents)
+        fp = self._make_fp(operation, parent_ids, shape, args, kwargs)
+        oid = id(artifact)
+
+        with self._fp_lock:
+            if self._last_fp.get(oid) == fp:
+                return None        
+            self._last_fp[oid] = fp
+
+        return self.track(operation, artifact, *args,
+                          parents=parent_ids, **kwargs)
+
+    def track(
+        self,
+        operation: str,
+        artifact:  Any,
+        *args: Any,
+        parents:   Iterable[str] = (),
+        **kwargs: Any,
+    ) -> Snapshot | None:
+        """Low-level snapshot creator (adapters should use `_idempotent_track`)."""
+        if not self._running:
+            return None
+
+        shape: tuple[int, ...] | None = getattr(artifact, "shape", None)
+        if shape is None and hasattr(artifact, "__len__"):
             shape = (len(artifact),)
 
         snap = Snapshot(
-            operation=operation,
-            shape=shape,
-            args=a,
-            kwargs=kw,
-            artifact= deepcopy_artifact(artifact)
+            operation = operation,
+            shape     = shape,
+            parents   = tuple(parents),
+            args      = args,
+            kwargs    = kwargs,
+            artifact  = artifact,          # strong reference later we introduce weak copy
         )
+
         self.history.append(snap)
         global_bus.publish("snapshot.created", snapshot=snap)
+        return snap
 
-    def manual(self, note:str, artifact:Any)->Snapshot| None:
-        """Manually add a snapshot with a free-text *note*."""
-        return self.track(note,artifact)
+    def manual(self, note: str, artifact: Any) -> Snapshot | None:
+        return self._idempotent_track(note, artifact)
