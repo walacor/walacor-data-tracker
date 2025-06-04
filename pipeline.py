@@ -18,7 +18,7 @@ from sklearn.ensemble import RandomForestClassifier
 
 from core.adapters.pandas_adapter import PandasAdapter
 from core.tracker import Tracker
-from core.writers.console_writer import ConsoleWriter
+from core.writers.console.console_writer import ConsoleWriter
 
 # --------------------------------------------------------------------------- #
 @dataclass(frozen=True)
@@ -42,7 +42,7 @@ class CFG:
 def load_tables(cfg: CFG) -> dict[str, pd.DataFrame]:
     def _read(fname: str) -> pd.DataFrame:
         df = pd.read_csv(cfg.data_dir / fname)
-        df.columns = df.columns.str.strip().str.lower()        # normalise once
+        df = df.set_axis(df.columns.str.strip().str.lower(), axis=1)
         if cfg.ts_col in df.columns:
             df[cfg.ts_col] = pd.to_datetime(df[cfg.ts_col])
         return df
@@ -149,25 +149,28 @@ def main() -> None:
 
     tables = load_tables(cfg)
     panel  = build_panel(tables, cfg)
-    X, y   = engineer_features(panel, cfg)
 
-    num_cols = [c for c in X.columns if X[c].dtype != "object" and c != cfg.id_col]
-    cat_cols = ["model"]
+    for s in tracker.history:
+        print(s.operation, "→ parents", s.parents)
+    # X, y   = engineer_features(panel, cfg)
 
-    pipe  = build_model(num_cols, cat_cols)
-    tscv  = TimeSeriesSplit(n_splits=cfg.cv_splits)
+    # num_cols = [c for c in X.columns if X[c].dtype != "object" and c != cfg.id_col]
+    # cat_cols = ["model"]
 
-    scores = cross_validate(pipe, X, y, cv=tscv,
-                            scoring={"f1": "f1", "roc": "roc_auc"},
-                            n_jobs=-1)
-    logging.info("F1  (mean) : %.3f", scores["test_f1"].mean())
-    logging.info("ROC AUC(mean): %.3f", scores["test_roc"].mean())
+    # pipe  = build_model(num_cols, cat_cols)
+    # tscv  = TimeSeriesSplit(n_splits=cfg.cv_splits)
 
-    pipe.fit(X, y)
-    cfg.model_dir.mkdir(exist_ok=True)
-    out = cfg.model_dir / "azure_pdm_rf.pkl"
-    joblib.dump(pipe, out)
-    logging.info("Model saved ➜ %s", out)
+    # scores = cross_validate(pipe, X, y, cv=tscv,
+    #                         scoring={"f1": "f1", "roc": "roc_auc"},
+    #                         n_jobs=-1)
+    # logging.info("F1  (mean) : %.3f", scores["test_f1"].mean())
+    # logging.info("ROC AUC(mean): %.3f", scores["test_roc"].mean())
+
+    # pipe.fit(X, y)
+    # cfg.model_dir.mkdir(exist_ok=True)
+    # out = cfg.model_dir / "azure_pdm_rf.pkl"
+    # joblib.dump(pipe, out)
+    # logging.info("Model saved ➜ %s", out)
 
 # --------------------------------------------------------------------------- #
 if __name__ == "__main__":
