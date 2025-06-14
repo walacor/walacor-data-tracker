@@ -1,7 +1,8 @@
 import collections
 from typing import Deque, Dict, Iterator, List
 
-from core.snapshot import Snapshot
+from .snapshot import Snapshot
+
 
 
 class History:

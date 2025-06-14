@@ -7,9 +7,8 @@ from typing import Any
 
 import pandas as pd
 
-from adapters.base import BaseAdapter
-from core.tracker       import Tracker
-
+from .base            import BaseAdapter  
+from walatrack.core.tracker import Tracker   
 
 _inside_call = contextvars.ContextVar("_inside_call", default=False)
 
@@ -31,7 +30,9 @@ class PandasAdapter(BaseAdapter):
     ]
 
     def __init__(self) -> None:
+        
         super().__init__()
+        print("Pandas Adapter init", self)
         self._originals: dict[str, Any] = {}
 
         self._parent_of: dict[int, str] = {}

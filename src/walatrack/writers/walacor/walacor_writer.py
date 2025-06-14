@@ -5,9 +5,10 @@ import logging
 import threading
 from typing import Any, Callable
 
-from src.writers.walacor.walacor_client import WalacorClient
-from src.core.snapshot import Snapshot
-from src.core.events import global_bus
+from walatrack.core.snapshot import Snapshot
+from writers.walacor.walacor_client import WalacorClient
+from walatrack import event_bus                   
+
 
 _LOG = logging.getLogger(__name__)
 _EVENT = "snapshot.created"
@@ -52,7 +53,7 @@ class WalacorWriter:
         self._last_node_uid: str | None = None
 
         # -- subscribe to the global bus ---------------------------------
-        self._unsubscribe: Callable[[], None] = global_bus.subscribe(
+        self._unsubscribe: Callable[[], None] = event_bus.subscribe(
             _EVENT, self._on_snapshot_created
         )
 

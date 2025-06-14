@@ -1,27 +1,19 @@
 from __future__ import annotations
 
 import logging
-from uuid import uuid4
 from typing import Any
 
 from walacor_sdk import WalacorService
 from walacor_sdk.schema import CreateSchemaDefinition
-from walacor_sdk.schema.models.models import (
-    CreateFieldRequest,
-    CreateIndexRequest,
-)
-from walacor_sdk.file_request.models.models import (
-    FileInfo,
-    StoreFileData,
-    DuplicateData,
-)
+from walacor_sdk.schema.models.models import CreateFieldRequest, CreateIndexRequest
+from walacor_sdk.file_request.models.models import FileInfo, StoreFileData, DuplicateData
 from walacor_sdk.data_requests.models.models import SubmissionResult
 
-from core.snapshot import Snapshot
+from walatrack.core.snapshot import Snapshot
 
 _LOG = logging.getLogger(__name__)
 
-# -------------------------------------------------------------------------> ETIds & table names
+# ---------- constants ----------------------------------------------------
 TRANSFORM_PROJECT_ETID = 20000
 TRANSFORM_NODE_ETID    = 20001
 TRANSFORM_EDGE_ETID    = 20002
@@ -32,9 +24,9 @@ TRANSFORM_EDGE_TABLE_NAME    = "transform_edge"
 
 TRANSFORM_FAMILY = "DataScience"
 
-# -------------------------------------------------------------------------> client façade
-class WalacorClient:  # noqa: D101
-    # ------------------------------------------------------------------ ctor
+# ========================================================================
+class WalacorClient:
+    # ---------------- ctor ----------------------------------------------
     def __init__(
         self,
         server: str,
@@ -47,20 +39,18 @@ class WalacorClient:  # noqa: D101
     ) -> None:
         self._walacor = WalacorService(server=server, username=username, password=password)
 
-        # 1) Make sure tables exist
         self._ensure_schema()
 
-        # 2) Create or fetch the project row once
+        # let Walacor create the UID for the project row
         self._project_uid: str = self._ensure_project_row(
             project_name=project_name,
             description=description,
             user_tag=user_tag,
         )
 
-        # 3) Track the latest node in this process (for automatic edge chaining)
         self._last_node_uid: str | None = None
 
-    # ===================================================================== public API
+    # ---------------- public API -----------------------------------------
     def insert_row(
         self,
         snapshot: Snapshot,
@@ -68,41 +58,37 @@ class WalacorClient:  # noqa: D101
         parent_uid: str | None = None,
     ) -> str:
         """
-        Upload artefact, insert node row (ETId 20001) and, if possible,
-        insert edge row (ETId 20002) that links `parent_uid` → new node.
-        Returns the new node UID so callers can continue the lineage.
+        Upload artefact ➜ insert node ➜ insert edge (optional).
+        Returns Walacor-generated node UID.
         """
-        # --------------------------------------------------- 1. verify / store artefact
+        # ---- 1. artefact upload / dedup ---------------------------------
         file_info: FileInfo | DuplicateData = self._walacor.file_request.verify_in_memory(
             snapshot.artifact
         )
 
-        artefact_uid: str
         if isinstance(file_info, FileInfo):
             stored: StoreFileData = self._walacor.file_request.store(file_info=file_info)
             artefact_uid = stored.UID[0]
-        else:
+        else:                                   
             artefact_uid = file_info.uid[0]
 
-        # --------------------------------------------------- 2. insert NODE row
-        node_uid = str(uuid4())
         node_row = {
-            "UID":          node_uid,
             "project_uid":  self._project_uid,
             "artifact_uid": artefact_uid,
             "operation":    snapshot.operation,
             "shape":        snapshot.shape,
-            "params_json":  snapshot.params,
+            "params_json":  snapshot.kwargs,
         }
 
         node_res: SubmissionResult | None = self._walacor.data_requests.insert_single_record(
             node_row,
             TRANSFORM_NODE_ETID,
         )
-        if node_res is None:
+        if node_res is None or not node_res.UID:
             raise RuntimeError("Failed to insert transform_node row")
+        node_uid: str = node_res.UID[0]                 
 
-        # --------------------------------------------------- 3. insert EDGE row
+        # ---- 3. insert EDGE (if parent known) ---------------------------
         parent = parent_uid or self._last_node_uid
         if parent:
             edge_row = {"parent_node_uid": parent, "child_node_uid": node_uid}
@@ -115,22 +101,20 @@ class WalacorClient:  # noqa: D101
         else:
             _LOG.debug("First node in lineage branch – no parent edge written")
 
-        # --------------------------------------------------- 4. bookkeeping
+        # ---- 4. chain bookkeeping --------------------------------------
         self._last_node_uid = node_uid
         return node_uid
 
-    # ===================================================================== private helpers
+    # ==================================================================== helpers
     def _ensure_schema(self) -> None:
-        """Create the three transform tables if they do not exist."""
         try:
             self._walacor.schema.get_schema_details_with_ETId(TRANSFORM_PROJECT_ETID)
             self._walacor.schema.get_schema_details_with_ETId(TRANSFORM_NODE_ETID)
             self._walacor.schema.get_schema_details_with_ETId(TRANSFORM_EDGE_ETID)
-        except Exception:  # pragma: no cover
+        except Exception:                                          # pragma: no cover
             _LOG.info("Creating Walacor transform schema")
             self._walacor.schema.create_schema(self._build_schema_definitions())
 
-    # ------------------------------------------------------------------ build schema defs
     def _build_schema_definitions(self) -> list[CreateSchemaDefinition]:
         return [
             # ------------- project_metadata
@@ -140,7 +124,7 @@ class WalacorClient:  # noqa: D101
                 Family=TRANSFORM_FAMILY,
                 DoSummary=False,
                 Fields=[
-                    CreateFieldRequest("project_name", "TEXT", required=True, max_length=50),
+                    CreateFieldRequest("project_name", "TEXT", required=True,  max_length=50),
                     CreateFieldRequest("description",  "TEXT", required=False, max_length=500),
                     CreateFieldRequest("user_tag",     "TEXT", required=False, max_length=50),
                 ],
@@ -152,9 +136,9 @@ class WalacorClient:  # noqa: D101
                 Family=TRANSFORM_FAMILY,
                 DoSummary=False,
                 Fields=[
-                    CreateFieldRequest("project_uid",  "TEXT", required=True, max_length=50),
+                    CreateFieldRequest("project_uid",  "TEXT", required=True,  max_length=50),
                     CreateFieldRequest("artifact_uid", "TEXT", required=False, max_length=50),
-                    CreateFieldRequest("operation",    "TEXT", required=True, max_length=50),
+                    CreateFieldRequest("operation",    "TEXT", required=True,  max_length=50),
                     CreateFieldRequest("shape",        "JSON", required=False),
                     CreateFieldRequest("params_json",  "JSON", required=False),
                 ],
@@ -181,7 +165,6 @@ class WalacorClient:  # noqa: D101
             ),
         ]
 
-    # ------------------------------------------------------------------ ensure / fetch project row
     def _ensure_project_row(
         self,
         *,
@@ -189,23 +172,16 @@ class WalacorClient:  # noqa: D101
         description: str | None,
         user_tag: str | None,
     ) -> str:
-        """
-        Return existing project UID by name, or create a new project row and
-        return its UID.
-        """
-        # -------- try fast lookup by project_name
-        filter_by_name = {"project_name": project_name}
+        # ---- lookup by name --------------------------------------------
         existing = self._walacor.data_requests.get_single_record_by_record_id(
-            filter_by_name,
+            {"project_name": project_name},
             ETId=TRANSFORM_PROJECT_ETID,
         )
         if existing:
             return existing[0]["UID"]
 
-        # -------- not found → insert
-        project_uid = str(uuid4())
+        # ---- not found → insert (no UID field) -------------------------
         project_row = {
-            "UID":          project_uid,
             "project_name": project_name,
             "description":  description or "",
             "user_tag":     user_tag or "",
@@ -214,6 +190,6 @@ class WalacorClient:  # noqa: D101
             project_row,
             TRANSFORM_PROJECT_ETID,
         )
-        if result is None:
+        if result is None or not result.UID:
             raise RuntimeError("Could not create project_metadata row")
-        return project_uid
+        return result.UID[0]                                           # Walacor-minted

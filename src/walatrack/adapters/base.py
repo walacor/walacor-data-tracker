@@ -1,8 +1,5 @@
-
 import abc
-
-from core.tracker import Tracker
-
+from walatrack.core.tracker import Tracker
 
 class BaseAdapter(abc.ABC):
     """All adapters must expose only *start* / *stop*."""

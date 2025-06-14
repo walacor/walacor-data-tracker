@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, Tuple
 
-from core.utils import generate_uuid, utc_now_iso
-
+from .utils import generate_uuid, utc_now_iso 
 
 @dataclass(frozen=True, slots=True)
 class Snapshot:

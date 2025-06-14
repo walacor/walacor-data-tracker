@@ -4,7 +4,7 @@ End-to-end predictive-maintenance pipeline (Azure PdM data).
 """
 
 from __future__ import annotations
-import logging, itertools, joblib
+import logging, itertools
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,9 +16,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.ensemble import RandomForestClassifier
 
-from core.adapters.pandas_adapter import PandasAdapter
+from adapters.pandas_adapter import PandasAdapter
 from core.tracker import Tracker
-from core.writers.console.console_writer import ConsoleWriter
+from writers.console.console_writer import ConsoleWriter
 
 # --------------------------------------------------------------------------- #
 @dataclass(frozen=True)

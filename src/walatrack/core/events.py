@@ -1,7 +1,7 @@
 from encodings.punycode import T
 import threading
 from types import TracebackType
-from typing import Any, Callable, MutableMapping
+from typing import Callable, MutableMapping
 
 
 class EventBus:
@@ -19,6 +19,9 @@ class EventBus:
 
         Returns a zero-argument function that **unsubscribes** this callback.
         """        
+        print("Event Bus Sub")
+        print("\t",event,"\t", callback)
+        print("\n", self)
         with self._LOCK:
             self._REGISTRY.setdefault(event, []).append(callback)
         
@@ -30,6 +33,7 @@ class EventBus:
     
 
     def unsubscribe(self, callback:T, event: str | None= None)->None:
+        print(event, callback)
         """Remove *callback* from one or all events."""
         with self._LOCK:
             if event is not None:
@@ -42,6 +46,10 @@ class EventBus:
 
     def publish(self, event: str, **payload)->None:
         """Fire *event*, forwarding all keyword arguments to each listener."""
+        print("Event Bus Pub")
+        print("\t",event)
+        print("\n", self)
+
         with self._LOCK:
             listeners = list(self._REGISTRY.get(event,()))
         for fn in listeners:
