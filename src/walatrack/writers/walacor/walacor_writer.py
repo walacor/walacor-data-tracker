@@ -1,4 +1,3 @@
-# src/writers/walacor/walacor_writer.py
 from __future__ import annotations
 
 import logging
@@ -6,7 +5,7 @@ import threading
 from typing import Any, Callable
 
 from walatrack.core.snapshot import Snapshot
-from writers.walacor.walacor_client import WalacorClient
+from .walacor_client import WalacorClient
 from walatrack import event_bus                   
 
 

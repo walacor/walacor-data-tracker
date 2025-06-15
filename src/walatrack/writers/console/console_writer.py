@@ -16,9 +16,9 @@ class ConsoleWriter:
         op      = snapshot.operation
         shp     = str(snapshot.shape) if snapshot.shape else "-"
         parents = ",".join(snapshot.parents) or "<root>"
-        print(
-            f"[walatrack] {ts}  {op:<25s}  {shp:<15s}  parents={parents:<25s}"
-        )
+        
+        artifact = snapshot.artifact
+        print(f"[walatrack] {ts}  {op:<25s}  {shp:<15s}  parents={parents:<25s}  {artifact!r}" )
 
     def close(self) -> None:
         """Detach the writer so it stops printing."""

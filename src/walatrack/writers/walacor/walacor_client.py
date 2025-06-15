@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from walacor_sdk import WalacorService
 from walacor_sdk.schema import CreateSchemaDefinition
 from walacor_sdk.schema.models.models import CreateFieldRequest, CreateIndexRequest
+from walacor_sdk.schema.models.schema_request import CreateSchemaRequest
 from walacor_sdk.file_request.models.models import FileInfo, StoreFileData, DuplicateData
+from walacor_sdk.utils.enums import FieldType
 from walacor_sdk.data_requests.models.models import SubmissionResult
 
 from walatrack.core.snapshot import Snapshot
@@ -107,62 +108,86 @@ class WalacorClient:
 
     # ==================================================================== helpers
     def _ensure_schema(self) -> None:
+        schemas = self._build_schema_requests()
         try:
             self._walacor.schema.get_schema_details_with_ETId(TRANSFORM_PROJECT_ETID)
+        except Exception:                                          # pragma: no cover
+            _LOG.info("Creating Walacor TRANSFORM_PROJECT schema")
+            self._walacor.schema.create_schema(schemas[0])
+            
+
+        try:
             self._walacor.schema.get_schema_details_with_ETId(TRANSFORM_NODE_ETID)
+        except Exception:                                          # pragma: no cover
+            _LOG.info("Creating Walacor transform schema")
+            self._walacor.schema.create_schema(schemas[1])
+
+        try:
             self._walacor.schema.get_schema_details_with_ETId(TRANSFORM_EDGE_ETID)
         except Exception:                                          # pragma: no cover
             _LOG.info("Creating Walacor transform schema")
-            self._walacor.schema.create_schema(self._build_schema_definitions())
+            self._walacor.schema.create_schema(schemas[2])
 
-    def _build_schema_definitions(self) -> list[CreateSchemaDefinition]:
+
+    def _build_schema_requests(self) -> list[CreateSchemaRequest]:
         return [
-            # ------------- project_metadata
-            CreateSchemaDefinition(
-                ETId=TRANSFORM_PROJECT_ETID,
-                TableName=TRANSFORM_PROJECT_TABLE_NAME,
-                Family=TRANSFORM_FAMILY,
-                DoSummary=False,
-                Fields=[
-                    CreateFieldRequest("project_name", "TEXT", required=True,  max_length=50),
-                    CreateFieldRequest("description",  "TEXT", required=False, max_length=500),
-                    CreateFieldRequest("user_tag",     "TEXT", required=False, max_length=50),
-                ],
+            CreateSchemaRequest(
+                ETId=50,
+                SV=1,
+                Schema= CreateSchemaDefinition(
+                    ETId       = TRANSFORM_PROJECT_ETID,
+                    TableName  = TRANSFORM_PROJECT_TABLE_NAME,
+                    Family     = TRANSFORM_FAMILY,
+                    DoSummary  = False,
+                    Fields=[
+                        CreateFieldRequest(FieldName="project_name",  DataType=FieldType.TEXT, Required=True,  MaxLength=50),
+                        CreateFieldRequest(FieldName="description",   DataType=FieldType.TEXT, Required=False, MaxLength=500),
+                        CreateFieldRequest(FieldName="user_tag",      DataType=FieldType.TEXT, Required=False, MaxLength=50),
+                    ],
+                )
             ),
-            # ------------- transform_node
-            CreateSchemaDefinition(
-                ETId=TRANSFORM_NODE_ETID,
-                TableName=TRANSFORM_NODE_TABLE_NAME,
-                Family=TRANSFORM_FAMILY,
-                DoSummary=False,
-                Fields=[
-                    CreateFieldRequest("project_uid",  "TEXT", required=True,  max_length=50),
-                    CreateFieldRequest("artifact_uid", "TEXT", required=False, max_length=50),
-                    CreateFieldRequest("operation",    "TEXT", required=True,  max_length=50),
-                    CreateFieldRequest("shape",        "JSON", required=False),
-                    CreateFieldRequest("params_json",  "JSON", required=False),
-                ],
-                Indexes=[
-                    CreateIndexRequest(fields=["project_uid"], index_value="project_uid"),
-                ],
-            ),
-            # ------------- transform_edge
-            CreateSchemaDefinition(
-                ETId=TRANSFORM_EDGE_ETID,
-                TableName=TRANSFORM_EDGE_TABLE_NAME,
-                Family=TRANSFORM_FAMILY,
-                DoSummary=False,
-                Fields=[
-                    CreateFieldRequest("parent_node_uid", "TEXT", required=True, max_length=50),
-                    CreateFieldRequest("child_node_uid",  "TEXT", required=True, max_length=50),
-                ],
-                Indexes=[
-                    CreateIndexRequest(
-                        fields=["parent_node_uid", "child_node_uid"],
-                        index_value="parent_child",
-                    ),
-                ],
-            ),
+             CreateSchemaRequest(
+                ETId=50,
+                SV=1,
+                Schema= CreateSchemaDefinition(
+                    ETId       = TRANSFORM_NODE_ETID,
+                    TableName  = TRANSFORM_NODE_TABLE_NAME,
+                    Family     = TRANSFORM_FAMILY,
+                    DoSummary  = False,
+                    Fields=[
+                        CreateFieldRequest(FieldName="project_uid",  DataType=FieldType.TEXT, Required=True,  MaxLength=50),
+                        CreateFieldRequest(FieldName="artifact_uid", DataType=FieldType.TEXT, Required=False, MaxLength=50),
+                        CreateFieldRequest(FieldName="operation",    DataType=FieldType.TEXT, Required=True,  MaxLength=50),
+                        CreateFieldRequest(FieldName="shape",        DataType=FieldType.ARRAY, Required=False),
+                        CreateFieldRequest(FieldName="params_json",  DataType=FieldType.TEXT, Required=False),
+                    ],
+                    Indexes=[
+                        CreateIndexRequest(Fields=["project_uid"], IndexValue="project_uid"),
+                    ],
+                ),
+             ),
+
+            # ---------- transform_edge (ETId 20002)
+            CreateSchemaRequest(
+                ETId=50,
+                SV=1,
+                Schema= CreateSchemaDefinition(
+                    ETId       = TRANSFORM_EDGE_ETID,
+                    TableName  = TRANSFORM_EDGE_TABLE_NAME,
+                    Family     = TRANSFORM_FAMILY,
+                    DoSummary  = False,
+                    Fields=[
+                        CreateFieldRequest(FieldName="parent_node_uid", DataType=FieldType.TEXT, Required=True, MaxLength=50),
+                        CreateFieldRequest(FieldName="child_node_uid",  DataType=FieldType.TEXT, Required=True, MaxLength=50),
+                    ],
+                    Indexes=[
+                        CreateIndexRequest(
+                            Fields=["parent_node_uid", "child_node_uid"],
+                            IndexValue="parent_child",
+                        ),
+                    ],
+                ),
+            )
         ]
 
     def _ensure_project_row(

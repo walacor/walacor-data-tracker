@@ -2,14 +2,16 @@ from importlib import import_module
 from typing import TYPE_CHECKING
 import types as _types
 
+
+from .walacor_writer import WalacorWriter       
 __all__: list[str] = ["WalacorWriter", "walacor_client"]
 
-def __getattr__(name: str) -> _types.ModuleType:
-    if name in __all__:
-        mod = import_module(f"{__name__}.{name}")
-        globals()[name] = mod          # cache
+def __getattr__(name: str) -> _types.ModuleType:   # type: ignore[override]
+    if name == "walacor_client":
+        mod = import_module(f"{__name__}.walacor_client")
+        globals()[name] = mod
         return mod
     raise AttributeError(name)
 
-if TYPE_CHECKING:           # pragma: no cover
-    from . import WalacorWriter, walacor_client   # noqa: F401
+if TYPE_CHECKING:                                # pragma: no cover
+    from . import walacor_client          
