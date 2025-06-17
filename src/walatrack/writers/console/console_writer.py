@@ -5,7 +5,6 @@ class ConsoleWriter:
     """Subscribe to *snapshot.created* and print a one-liner."""
 
     def __init__(self) -> None:
-        print("Console Writer init", self)
         # Subscribe once; keep the unsubscribe callback
         self._unsub = event_bus.subscribe(
             "snapshot.created", self._on_snapshot   # type: ignore[arg-type]

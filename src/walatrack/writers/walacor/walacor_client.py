@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 
 from walacor_sdk import WalacorService
@@ -42,7 +43,6 @@ class WalacorClient:
 
         self._ensure_schema()
 
-        # let Walacor create the UID for the project row
         self._project_uid: str = self._ensure_project_row(
             project_name=project_name,
             description=description,
@@ -77,14 +77,15 @@ class WalacorClient:
             "project_uid":  self._project_uid,
             "artifact_uid": artefact_uid,
             "operation":    snapshot.operation,
-            "shape":        snapshot.shape,
-            "params_json":  snapshot.kwargs,
+            "shape":        list(snapshot.shape),
+            "params_json":  json.dumps(snapshot.kwargs),
         }
 
         node_res: SubmissionResult | None = self._walacor.data_requests.insert_single_record(
             node_row,
             TRANSFORM_NODE_ETID,
         )
+        
         if node_res is None or not node_res.UID:
             raise RuntimeError("Failed to insert transform_node row")
         node_uid: str = node_res.UID[0]                 
@@ -138,7 +139,7 @@ class WalacorClient:
                     ETId       = TRANSFORM_PROJECT_ETID,
                     TableName  = TRANSFORM_PROJECT_TABLE_NAME,
                     Family     = TRANSFORM_FAMILY,
-                    DoSummary  = False,
+                    DoSummary  = True,
                     Fields=[
                         CreateFieldRequest(FieldName="project_name",  DataType=FieldType.TEXT, Required=True,  MaxLength=50),
                         CreateFieldRequest(FieldName="description",   DataType=FieldType.TEXT, Required=False, MaxLength=500),
@@ -153,7 +154,7 @@ class WalacorClient:
                     ETId       = TRANSFORM_NODE_ETID,
                     TableName  = TRANSFORM_NODE_TABLE_NAME,
                     Family     = TRANSFORM_FAMILY,
-                    DoSummary  = False,
+                    DoSummary  = True,
                     Fields=[
                         CreateFieldRequest(FieldName="project_uid",  DataType=FieldType.TEXT, Required=True,  MaxLength=50),
                         CreateFieldRequest(FieldName="artifact_uid", DataType=FieldType.TEXT, Required=False, MaxLength=50),
@@ -175,7 +176,7 @@ class WalacorClient:
                     ETId       = TRANSFORM_EDGE_ETID,
                     TableName  = TRANSFORM_EDGE_TABLE_NAME,
                     Family     = TRANSFORM_FAMILY,
-                    DoSummary  = False,
+                    DoSummary  = True,
                     Fields=[
                         CreateFieldRequest(FieldName="parent_node_uid", DataType=FieldType.TEXT, Required=True, MaxLength=50),
                         CreateFieldRequest(FieldName="child_node_uid",  DataType=FieldType.TEXT, Required=True, MaxLength=50),

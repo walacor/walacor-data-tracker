@@ -32,7 +32,6 @@ class PandasAdapter(BaseAdapter):
     def __init__(self) -> None:
         
         super().__init__()
-        print("Pandas Adapter init", self)
         self._originals: dict[str, Any] = {}
 
         self._parent_of: dict[int, str] = {}

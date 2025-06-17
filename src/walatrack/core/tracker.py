@@ -12,8 +12,6 @@ class Tracker:
     """Create snapshots and broadcast them on the global event bus."""
 
     def __init__(self, max_history: int | None = None) -> None:
-        print("Tracker Init", self)
-
         self.history  = History(max_len=max_history)
         self._running = False
 
