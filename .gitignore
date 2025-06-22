@@ -25,4 +25,5 @@ tests/temp
 .vscode/
 .wercker/
 temp
+pipeline.py
 main.py
