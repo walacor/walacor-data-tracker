@@ -19,7 +19,6 @@ __all__: list[str] = [
     "Snapshot",
     "History",
     "PandasAdapter",
-    # lazy sub-packages -----------
     "writers",
     "adapters",
 ]
@@ -27,7 +26,7 @@ __all__: list[str] = [
 def __getattr__(name: str) -> _types.ModuleType:
     if name in {"writers", "adapters"}:
         mod = import_module(f"{__name__}.{name}")
-        globals()[name] = mod          # cache for next access
+        globals()[name] = mod         
         return mod
     raise AttributeError(name)
 
