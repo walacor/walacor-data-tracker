@@ -4,12 +4,10 @@ import json
 import logging
 
 from walacor_sdk import WalacorService
-from walacor_sdk.schema import CreateSchemaDefinition
-from walacor_sdk.schema.models.models import CreateFieldRequest, CreateIndexRequest
-from walacor_sdk.schema.models.schema_request import CreateSchemaRequest
-from walacor_sdk.file_request.models.models import FileInfo, StoreFileData, DuplicateData
+from walacor_sdk.schema import CreateSchemaDefinition, CreateFieldRequest, CreateIndexRequest, CreateSchemaRequest
+from walacor_sdk.file_request import FileInfo, StoreFileData, DuplicateData
 from walacor_sdk.utils.enums import FieldType
-from walacor_sdk.data_requests.models.models import SubmissionResult
+from walacor_sdk.data_requests import SubmissionResult
 
 from walatrack.core.snapshot import Snapshot
 
@@ -133,8 +131,6 @@ class WalacorClient:
     def _build_schema_requests(self) -> list[CreateSchemaRequest]:
         return [
             CreateSchemaRequest(
-                ETId=50,
-                SV=1,
                 Schema= CreateSchemaDefinition(
                     ETId       = TRANSFORM_PROJECT_ETID,
                     TableName  = TRANSFORM_PROJECT_TABLE_NAME,
@@ -148,8 +144,6 @@ class WalacorClient:
                 )
             ),
              CreateSchemaRequest(
-                ETId=50,
-                SV=1,
                 Schema= CreateSchemaDefinition(
                     ETId       = TRANSFORM_NODE_ETID,
                     TableName  = TRANSFORM_NODE_TABLE_NAME,
@@ -170,8 +164,6 @@ class WalacorClient:
 
             # ---------- transform_edge (ETId 20002)
             CreateSchemaRequest(
-                ETId=50,
-                SV=1,
                 Schema= CreateSchemaDefinition(
                     ETId       = TRANSFORM_EDGE_ETID,
                     TableName  = TRANSFORM_EDGE_TABLE_NAME,
