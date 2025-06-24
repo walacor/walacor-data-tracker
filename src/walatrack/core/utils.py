@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
+
 from typing import Any
 
 
@@ -14,12 +15,13 @@ def utc_now_iso() -> str:
         .replace("+00:00", "Z")
     )
 
+
 def generate_uuid() -> str:
-    """Shorthand for ``str(uuid.uuid4())`` """
+    """Shorthand for ``str(uuid.uuid4())``"""
     return str(uuid.uuid4())
 
 
-def deepcopy_artifact(obj: Any)->Any:
+def deepcopy_artifact(obj: Any) -> Any:
     """Attempt a deep copy of *obj* while **not** importing heavy libs up front.
 
     Priority order
