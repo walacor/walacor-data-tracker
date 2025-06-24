@@ -1,7 +1,6 @@
 import types as _types
 
 from importlib import import_module
-from typing import TYPE_CHECKING
 
 from .pandas_adapter import PandasAdapter
 
@@ -14,7 +13,3 @@ def __getattr__(name: str) -> _types.ModuleType:
         globals()[name] = mod
         return mod
     raise AttributeError(name)
-
-
-if TYPE_CHECKING:  # pragma: no cover
-    from . import spark_adapter

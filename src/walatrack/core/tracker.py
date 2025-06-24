@@ -84,9 +84,9 @@ class Tracker:
         if not self._running:
             return None
 
-        shape: tuple[int, ...] | None = getattr(artifact, "shape", None)
-        if shape is None and hasattr(artifact, "__len__"):
-            shape = (len(artifact),)
+        shape = getattr(artifact, "shape", None)
+        if shape is None:
+            shape = (len(artifact),) if hasattr(artifact, "__len__") else ()
 
         snap = Snapshot(
             operation=operation,
@@ -94,7 +94,7 @@ class Tracker:
             parents=tuple(parents),
             args=args,
             kwargs=kwargs,
-            artifact=artifact,  # strong reference later we introduce weak copy
+            artifact=artifact,
         )
 
         self.history.append(snap)

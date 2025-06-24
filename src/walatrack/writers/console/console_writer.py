@@ -7,9 +7,7 @@ class ConsoleWriter:
 
     def __init__(self) -> None:
         # Subscribe once; keep the unsubscribe callback
-        self._unsub = event_bus.subscribe(
-            "snapshot.created", self._on_snapshot  # type: ignore[arg-type]
-        )
+        self._unsub = event_bus.subscribe("snapshot.created", self._on_snapshot)
 
     def _on_snapshot(self, snapshot: Snapshot) -> None:
         ts = snapshot.timestamp

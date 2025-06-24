@@ -98,6 +98,8 @@ class WalacorClient:
 
         if node_res is None or not node_res.UID:
             raise RuntimeError("Failed to insert transform_node row")
+
+        assert isinstance(node_res.UID[0], str)
         node_uid: str = node_res.UID[0]
 
         # ---- 3. insert EDGE (if parent known) ---------------------------
@@ -255,7 +257,9 @@ class WalacorClient:
             ETId=TRANSFORM_PROJECT_ETID,
         )
         if existing:
-            return existing[0]["UID"]
+            uid = existing[0]["UID"]
+            assert isinstance(uid, str)
+            return uid
 
         # ---- not found → insert (no UID field) -------------------------
         project_row = {
@@ -269,4 +273,6 @@ class WalacorClient:
         )
         if result is None or not result.UID:
             raise RuntimeError("Could not create project_metadata row")
+
+        assert isinstance(result.UID[0], str)
         return result.UID[0]  # Walacor-minted

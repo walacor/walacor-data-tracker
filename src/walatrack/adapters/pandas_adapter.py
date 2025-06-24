@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from walatrack.core.tracker import Tracker
+
 """walatrack.adapters.pandas_adapter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Adapter that monkey‑patches ``pandas.DataFrame`` so that *user‑level*
@@ -80,7 +82,7 @@ class PandasAdapter(BaseAdapter):
     # ------------------------------------------------------------------
     def _wrap_df_init(self) -> None:
         """Patch ``DataFrame.__init__`` so construction is tracked."""
-        original: Callable[..., None] = pd.DataFrame.__init__  # type: ignore[attr-defined]
+        original: Callable[..., None] = pd.DataFrame.__init__
         self._originals["__init__"] = original
 
         @functools.wraps(original)
@@ -94,7 +96,7 @@ class PandasAdapter(BaseAdapter):
             token = _inside_call.set(True)
             try:
                 original(df_self, *a, **kw)
-                snap = self.tracker._idempotent_track(  # type: ignore[attr-defined]
+                snap = self.tracker._idempotent_track(
                     "DataFrame.__init__", df_self, *a, **kw, parents=()
                 )
                 if snap:
@@ -103,7 +105,7 @@ class PandasAdapter(BaseAdapter):
             finally:
                 _inside_call.reset(token)
 
-        pd.DataFrame.__init__ = init_wrapper  # type: ignore[assignment]
+        pd.DataFrame.__init__ = init_wrapper
 
     def _wrap(self, name: str) -> None:
         """Patch a single DataFrame method so it emits at most one snapshot."""
@@ -123,7 +125,7 @@ class PandasAdapter(BaseAdapter):
                     result if isinstance(result, pd.DataFrame) else df_self
                 )
 
-                snap = self.tracker._idempotent_track(  # type: ignore[attr-defined]
+                snap = self.tracker._idempotent_track(
                     f"DataFrame.{name}",
                     target,
                     *a,
@@ -142,9 +144,9 @@ class PandasAdapter(BaseAdapter):
     # ------------------------------------------------------------------
     # Public API required by ``BaseAdapter``
     # ------------------------------------------------------------------
-    def _patch(self) -> None:  # noqa: D401, ANN001
+    def _patch(self, tracker: Tracker) -> None:
         """Apply all monkey‑patches. Called by :pyclass:`BaseAdapter`."""
-        # ``BaseAdapter`` ensures ``self.tracker`` exists before invoking us.
+        self.tracker = tracker
         self._wrap_df_init()
         for meth in self._DF_METHODS:
             self._wrap(meth)
