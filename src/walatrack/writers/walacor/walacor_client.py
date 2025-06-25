@@ -4,10 +4,15 @@ import json
 import logging
 
 from walacor_sdk import WalacorService
-from walacor_sdk.schema import CreateSchemaDefinition, CreateFieldRequest, CreateIndexRequest, CreateSchemaRequest
-from walacor_sdk.file_request import FileInfo, StoreFileData, DuplicateData
-from walacor_sdk.utils.enums import FieldType
 from walacor_sdk.data_requests import SubmissionResult
+from walacor_sdk.file_request import DuplicateData, FileInfo, StoreFileData
+from walacor_sdk.schema import (
+    CreateFieldRequest,
+    CreateIndexRequest,
+    CreateSchemaDefinition,
+    CreateSchemaRequest,
+)
+from walacor_sdk.utils.enums import FieldType
 
 from walatrack.core.snapshot import Snapshot
 
@@ -15,14 +20,15 @@ _LOG = logging.getLogger(__name__)
 
 # ---------- constants ----------------------------------------------------
 TRANSFORM_PROJECT_ETID = 20000
-TRANSFORM_NODE_ETID    = 20001
-TRANSFORM_EDGE_ETID    = 20002
+TRANSFORM_NODE_ETID = 20001
+TRANSFORM_EDGE_ETID = 20002
 
 TRANSFORM_PROJECT_TABLE_NAME = "project_metadata"
-TRANSFORM_NODE_TABLE_NAME    = "transform_node"
-TRANSFORM_EDGE_TABLE_NAME    = "transform_edge"
+TRANSFORM_NODE_TABLE_NAME = "transform_node"
+TRANSFORM_EDGE_TABLE_NAME = "transform_edge"
 
 TRANSFORM_FAMILY = "DataScience"
+
 
 # ========================================================================
 class WalacorClient:
@@ -37,7 +43,9 @@ class WalacorClient:
         description: str | None = None,
         user_tag: str | None = None,
     ) -> None:
-        self._walacor = WalacorService(server=server, username=username, password=password)
+        self._walacor = WalacorService(
+            server=server, username=username, password=password
+        )
 
         self._ensure_schema()
 
@@ -61,32 +69,38 @@ class WalacorClient:
         Returns Walacor-generated node UID.
         """
         # ---- 1. artefact upload / dedup ---------------------------------
-        file_info: FileInfo | DuplicateData = self._walacor.file_request.verify_in_memory(
-            snapshot.artifact
+        file_info: FileInfo | DuplicateData = (
+            self._walacor.file_request.verify_in_memory(snapshot.artifact)
         )
 
         if isinstance(file_info, FileInfo):
-            stored: StoreFileData = self._walacor.file_request.store(file_info=file_info)
+            stored: StoreFileData = self._walacor.file_request.store(
+                file_info=file_info
+            )
             artefact_uid = stored.UID[0]
-        else:                                   
+        else:
             artefact_uid = file_info.uid[0]
 
         node_row = {
-            "project_uid":  self._project_uid,
+            "project_uid": self._project_uid,
             "artifact_uid": artefact_uid,
-            "operation":    snapshot.operation,
-            "shape":        list(snapshot.shape),
-            "params_json":  json.dumps(snapshot.kwargs),
+            "operation": snapshot.operation,
+            "shape": list(snapshot.shape),
+            "params_json": json.dumps(snapshot.kwargs),
         }
 
-        node_res: SubmissionResult | None = self._walacor.data_requests.insert_single_record(
-            node_row,
-            TRANSFORM_NODE_ETID,
+        node_res: SubmissionResult | None = (
+            self._walacor.data_requests.insert_single_record(
+                node_row,
+                TRANSFORM_NODE_ETID,
+            )
         )
-        
+
         if node_res is None or not node_res.UID:
             raise RuntimeError("Failed to insert transform_node row")
-        node_uid: str = node_res.UID[0]                 
+
+        assert isinstance(node_res.UID[0], str)
+        node_uid: str = node_res.UID[0]
 
         # ---- 3. insert EDGE (if parent known) ---------------------------
         parent = parent_uid or self._last_node_uid
@@ -97,7 +111,9 @@ class WalacorClient:
                 TRANSFORM_EDGE_ETID,
             )
             if edge_res is None:
-                _LOG.error("Edge creation failed (parent=%s child=%s)", parent, node_uid)
+                _LOG.error(
+                    "Edge creation failed (parent=%s child=%s)", parent, node_uid
+                )
         else:
             _LOG.debug("First node in lineage branch – no parent edge written")
 
@@ -110,68 +126,113 @@ class WalacorClient:
         schemas = self._build_schema_requests()
         try:
             self._walacor.schema.get_schema_details_with_ETId(TRANSFORM_PROJECT_ETID)
-        except Exception:                                          # pragma: no cover
+        except Exception:  # pragma: no cover
             _LOG.info("Creating Walacor TRANSFORM_PROJECT schema")
             self._walacor.schema.create_schema(schemas[0])
-            
 
         try:
             self._walacor.schema.get_schema_details_with_ETId(TRANSFORM_NODE_ETID)
-        except Exception:                                          # pragma: no cover
+        except Exception:  # pragma: no cover
             _LOG.info("Creating Walacor transform schema")
             self._walacor.schema.create_schema(schemas[1])
 
         try:
             self._walacor.schema.get_schema_details_with_ETId(TRANSFORM_EDGE_ETID)
-        except Exception:                                          # pragma: no cover
+        except Exception:  # pragma: no cover
             _LOG.info("Creating Walacor transform schema")
             self._walacor.schema.create_schema(schemas[2])
-
 
     def _build_schema_requests(self) -> list[CreateSchemaRequest]:
         return [
             CreateSchemaRequest(
-                Schema= CreateSchemaDefinition(
-                    ETId       = TRANSFORM_PROJECT_ETID,
-                    TableName  = TRANSFORM_PROJECT_TABLE_NAME,
-                    Family     = TRANSFORM_FAMILY,
-                    DoSummary  = True,
+                Schema=CreateSchemaDefinition(
+                    ETId=TRANSFORM_PROJECT_ETID,
+                    TableName=TRANSFORM_PROJECT_TABLE_NAME,
+                    Family=TRANSFORM_FAMILY,
+                    DoSummary=True,
                     Fields=[
-                        CreateFieldRequest(FieldName="project_name",  DataType=FieldType.TEXT, Required=True,  MaxLength=50),
-                        CreateFieldRequest(FieldName="description",   DataType=FieldType.TEXT, Required=False, MaxLength=500),
-                        CreateFieldRequest(FieldName="user_tag",      DataType=FieldType.TEXT, Required=False, MaxLength=50),
+                        CreateFieldRequest(
+                            FieldName="project_name",
+                            DataType=FieldType.TEXT,
+                            Required=True,
+                            MaxLength=50,
+                        ),
+                        CreateFieldRequest(
+                            FieldName="description",
+                            DataType=FieldType.TEXT,
+                            Required=False,
+                            MaxLength=500,
+                        ),
+                        CreateFieldRequest(
+                            FieldName="user_tag",
+                            DataType=FieldType.TEXT,
+                            Required=False,
+                            MaxLength=50,
+                        ),
                     ],
                 )
             ),
-             CreateSchemaRequest(
-                Schema= CreateSchemaDefinition(
-                    ETId       = TRANSFORM_NODE_ETID,
-                    TableName  = TRANSFORM_NODE_TABLE_NAME,
-                    Family     = TRANSFORM_FAMILY,
-                    DoSummary  = True,
+            CreateSchemaRequest(
+                Schema=CreateSchemaDefinition(
+                    ETId=TRANSFORM_NODE_ETID,
+                    TableName=TRANSFORM_NODE_TABLE_NAME,
+                    Family=TRANSFORM_FAMILY,
+                    DoSummary=True,
                     Fields=[
-                        CreateFieldRequest(FieldName="project_uid",  DataType=FieldType.TEXT, Required=True,  MaxLength=50),
-                        CreateFieldRequest(FieldName="artifact_uid", DataType=FieldType.TEXT, Required=False, MaxLength=50),
-                        CreateFieldRequest(FieldName="operation",    DataType=FieldType.TEXT, Required=True,  MaxLength=50),
-                        CreateFieldRequest(FieldName="shape",        DataType=FieldType.ARRAY, Required=False),
-                        CreateFieldRequest(FieldName="params_json",  DataType=FieldType.TEXT, Required=False),
+                        CreateFieldRequest(
+                            FieldName="project_uid",
+                            DataType=FieldType.TEXT,
+                            Required=True,
+                            MaxLength=50,
+                        ),
+                        CreateFieldRequest(
+                            FieldName="artifact_uid",
+                            DataType=FieldType.TEXT,
+                            Required=False,
+                            MaxLength=50,
+                        ),
+                        CreateFieldRequest(
+                            FieldName="operation",
+                            DataType=FieldType.TEXT,
+                            Required=True,
+                            MaxLength=50,
+                        ),
+                        CreateFieldRequest(
+                            FieldName="shape", DataType=FieldType.ARRAY, Required=False
+                        ),
+                        CreateFieldRequest(
+                            FieldName="params_json",
+                            DataType=FieldType.TEXT,
+                            Required=False,
+                        ),
                     ],
                     Indexes=[
-                        CreateIndexRequest(Fields=["project_uid"], IndexValue="project_uid"),
+                        CreateIndexRequest(
+                            Fields=["project_uid"], IndexValue="project_uid"
+                        ),
                     ],
                 ),
-             ),
-
+            ),
             # ---------- transform_edge (ETId 20002)
             CreateSchemaRequest(
-                Schema= CreateSchemaDefinition(
-                    ETId       = TRANSFORM_EDGE_ETID,
-                    TableName  = TRANSFORM_EDGE_TABLE_NAME,
-                    Family     = TRANSFORM_FAMILY,
-                    DoSummary  = True,
+                Schema=CreateSchemaDefinition(
+                    ETId=TRANSFORM_EDGE_ETID,
+                    TableName=TRANSFORM_EDGE_TABLE_NAME,
+                    Family=TRANSFORM_FAMILY,
+                    DoSummary=True,
                     Fields=[
-                        CreateFieldRequest(FieldName="parent_node_uid", DataType=FieldType.TEXT, Required=True, MaxLength=50),
-                        CreateFieldRequest(FieldName="child_node_uid",  DataType=FieldType.TEXT, Required=True, MaxLength=50),
+                        CreateFieldRequest(
+                            FieldName="parent_node_uid",
+                            DataType=FieldType.TEXT,
+                            Required=True,
+                            MaxLength=50,
+                        ),
+                        CreateFieldRequest(
+                            FieldName="child_node_uid",
+                            DataType=FieldType.TEXT,
+                            Required=True,
+                            MaxLength=50,
+                        ),
                     ],
                     Indexes=[
                         CreateIndexRequest(
@@ -180,7 +241,7 @@ class WalacorClient:
                         ),
                     ],
                 ),
-            )
+            ),
         ]
 
     def _ensure_project_row(
@@ -196,13 +257,15 @@ class WalacorClient:
             ETId=TRANSFORM_PROJECT_ETID,
         )
         if existing:
-            return existing[0]["UID"]
+            uid = existing[0]["UID"]
+            assert isinstance(uid, str)
+            return uid
 
         # ---- not found → insert (no UID field) -------------------------
         project_row = {
             "project_name": project_name,
-            "description":  description or "",
-            "user_tag":     user_tag or "",
+            "description": description or "",
+            "user_tag": user_tag or "",
         }
         result = self._walacor.data_requests.insert_single_record(
             project_row,
@@ -210,4 +273,6 @@ class WalacorClient:
         )
         if result is None or not result.UID:
             raise RuntimeError("Could not create project_metadata row")
-        return result.UID[0]                                           # Walacor-minted
+
+        assert isinstance(result.UID[0], str)
+        return result.UID[0]  # Walacor-minted

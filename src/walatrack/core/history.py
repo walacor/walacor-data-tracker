@@ -1,8 +1,8 @@
 import collections
+
 from typing import Deque, Dict, Iterator, List
 
 from .snapshot import Snapshot
-
 
 
 class History:
@@ -13,7 +13,6 @@ class History:
         self._children: Dict[str, List[str]] = {}
         self._parents: Dict[str, List[str]] = {}
 
- 
     def append(self, snap: Snapshot) -> None:
         """Append *snap* and update adjacency lists.
 
@@ -33,7 +32,6 @@ class History:
         if evicted is not None:
             self._remove_snapshot(evicted.id)
 
-    
     def parents_of(self, sid: str) -> List[str]:
         return self._parents.get(sid, [])
 
@@ -81,8 +79,7 @@ class History:
         """Remove *sid* from adjacency lists – called when buffer evicts."""
         for p in self._parents.pop(sid, []):
             self._children.get(p, []).remove(sid)
-            if not self._children[p]:  
+            if not self._children[p]:
                 self._children.pop(p)
-                
-        self._children.pop(sid, None)
 
+        self._children.pop(sid, None)
