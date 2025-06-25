@@ -79,6 +79,56 @@ Once set up, your transformation history will be automatically recorded and can 
 
 ---
 
+Here’s the updated `README.md` with a concise, illustrative example that highlights how easy it is to use `walatrack`. This is placed right after the **Getting Started** section and demonstrates a realistic tracking flow with minimal code:
+
+---
+
+## 🧪 Minimal Example
+
+Here's how simple it is to start tracking transformations:
+
+```python
+import pandas as pd
+from walatrack import Tracker, PandasAdapter
+from walatrack.writers import ConsoleWriter
+from walatrack.writers.walacor import WalacorWriter
+
+# 1. Start the tracker and adapter
+tracker = Tracker().start()
+adapter = PandasAdapter().start(tracker)
+
+# 2. Define writers (console, or send to Walacor backend)
+console_writer = ConsoleWriter()
+walacor_writer = WalacorWriter(
+    base_url="http://your-walacor-url/api",
+    username="your-username",
+    password="your-password",
+    project_name="MyProject",
+    description="Optiona Description"
+)
+
+# 3. Apply transformations as usual
+df = pd.DataFrame({"id": [1, 2], "value": [100, 200]})
+df2 = df.assign(new_val=df.value * 2)
+df3 = df2.rename(columns={"value": "v"})
+
+# 4. Stop and export the lineage
+tracker.stop()
+
+````
+
+> 💡 The `PandasAdapter` automatically tracks operations like `.assign()`, `.rename()`, `.merge()`, etc., so you can work with pandas as usual — but with versioned lineage behind the scenes.
+
+
+---
+
+This snippet:
+- Is short enough to understand at a glance
+- Avoids hardcoded credentials or IPs
+- Clearly reflects your existing setup
+- Shows the power and simplicity of the library
+
+
 ## 🤝 Contributing
 
 1. Fork → feature branch → PR.
