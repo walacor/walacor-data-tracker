@@ -41,6 +41,7 @@ dependencies = [
   "fastparquet>=2024.2",
   "numpy>=1.26",
   "scikit-learn>=1.4",
+  "walacor-python-sdk>=0.1.5",
 ]
 
 [project.optional-dependencies]
