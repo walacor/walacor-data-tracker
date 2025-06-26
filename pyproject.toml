@@ -6,7 +6,7 @@ requires = [
 ]
 
 [project]
-name = "walatrack"
+name = "walacor-data-tracker"
 description = "SDK and CLI for capturing data‑science lineage and persisting DAG snapshots to Walacor."
 readme = "README.md"
 keywords = [
