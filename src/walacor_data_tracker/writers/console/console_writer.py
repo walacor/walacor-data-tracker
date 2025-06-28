@@ -1,5 +1,5 @@
-from walatrack import event_bus
-from walatrack.core.snapshot import Snapshot
+from walacor_data_tracker import event_bus
+from walacor_data_tracker.core.snapshot import Snapshot
 
 
 class ConsoleWriter:

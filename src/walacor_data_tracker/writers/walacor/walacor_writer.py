@@ -5,8 +5,8 @@ import threading
 
 from typing import Any, Callable
 
-from walatrack import event_bus
-from walatrack.core.snapshot import Snapshot
+from walacor_data_tracker import event_bus
+from walacor_data_tracker.core.snapshot import Snapshot
 
 from .walacor_client import WalacorClient
 
