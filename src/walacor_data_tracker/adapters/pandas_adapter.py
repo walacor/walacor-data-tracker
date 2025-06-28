@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from walatrack.core.tracker import Tracker
+from walacor_data_tracker.core.tracker import Tracker
 
 """walatrack.adapters.pandas_adapter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

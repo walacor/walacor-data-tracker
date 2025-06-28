@@ -1,6 +1,6 @@
 import abc
 
-from walatrack.core.tracker import Tracker
+from walacor_data_tracker.core.tracker import Tracker
 
 
 class BaseAdapter(abc.ABC):

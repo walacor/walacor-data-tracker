@@ -14,7 +14,7 @@ from walacor_sdk.schema import (
 )
 from walacor_sdk.utils.enums import FieldType
 
-from walatrack.core.snapshot import Snapshot
+from walacor_data_tracker.core.snapshot import Snapshot
 
 _LOG = logging.getLogger(__name__)
 
