@@ -1,6 +1,6 @@
 import pytest
 
-from walatrack.core.events import EventBus
+from walacor_data_tracker.core.events import EventBus
 
 
 @pytest.fixture
