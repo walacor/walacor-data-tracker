@@ -7,7 +7,7 @@ requires = [
 
 [project]
 name = "walacor-data-tracker"
-description = "SDK and CLI for capturing data‑science lineage and persisting DAG snapshots to Walacor."
+description = "SDK and CLI for capturing data-science lineage and persisting DAG snapshots to Walacor."
 readme = "README.md"
 keywords = [
   "data-transformations",
@@ -109,7 +109,7 @@ filterwarnings = [
   # Ignore resource warnings due to a CPython/Windows bug (https://bugs.python.org/issue44428)
   "ignore:unclosed transport <_ProactorSocketTransport.*:ResourceWarning",
   # Workaround for Python 3.9.7 (see https://bugs.python.org/issue45097)
-  "ignore:The loop argument is deprecated since Python 3\.8, and scheduled for removal in Python 3\.10\.:DeprecationWarning:asyncio",
+  "ignore:The loop argument is deprecated since Python 3\\.8, and scheduled for removal in Python 3\\.10\\.:DeprecationWarning:asyncio",
 ]
 markers = [
   "network: marks tests as requiring Internet access",
