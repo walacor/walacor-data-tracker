@@ -38,7 +38,7 @@ A schema-first framework to **track, version, and store the full lineage of data
 | **Transform Edge** | `transform_edge` | Dependency between two nodes. |
 | **Project Metadata** | `project_metadata` | Run-level info (owner, description, timestamps). |
 
-> **Immutable Snapshots**  
+> **Immutable Snapshots**
 > Once a DAG is written to Walacor, it cannot mutate—only a *new* snapshot (with a higher SV or run ID) can supersede it.
 
 ---
@@ -49,7 +49,7 @@ A schema-first framework to **track, version, and store the full lineage of data
 ### 1. Install the SDKs
 
 ```bash
-pip install walatrack 
+pip install walatrack
 ````
 
 > Make sure you're using Python 3.10+ and have internet access to reach the Walacor API.
