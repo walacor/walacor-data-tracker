@@ -15,6 +15,7 @@ from walacor_sdk.schema import (
 from walacor_sdk.utils.enums import FieldType
 
 from walacor_data_tracker.core.snapshot import Snapshot
+from walacor_data_tracker.writers.walacor._json import jsonify
 
 _LOG = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class WalacorClient:
             "artifact_uid": artefact_uid,
             "operation": snapshot.operation,
             "shape": list(snapshot.shape),
-            "params_json": json.dumps(snapshot.kwargs),
+            "params_json": json.dumps(jsonify(snapshot.kwargs)),
         }
 
         node_res: SubmissionResult | None = (
