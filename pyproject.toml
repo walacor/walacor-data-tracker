@@ -62,7 +62,7 @@ Source = "https://github.com/walacor/walacor-data-tracker"
 Issues = "https://github.com/walacor/walacor-data-tracker/issues"
 
 [tool.setuptools.package-data]
-"walatrack" = ["py.typed"]
+"walacor_data_tracker" = ["py.typed"]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -87,13 +87,13 @@ extend-select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["walatrack", "walacor_data_tracker"]
+known-first-party = ["walacor_data_tracker"]
 combine-as-imports = true
 lines-between-types = 1
 
 [tool.isort]
 profile = "black"
-known_first_party = ["walatrack", "walacor_data_tracker"]
+known_first_party = ["walacor_data_tracker"]
 combine_as_imports = true
 lines_between_types = 1
 
@@ -137,7 +137,7 @@ allowlist_externals = [ "pre-commit" ]
 package = "skip"
 
 [tool.tox.env.pytest]
-commands = ["pytest", "--pyargs", "walatrack"]
+commands = ["pytest", "--pyargs", "walacor_data_tracker"]
 
 [tool.mypy]
 python_version = "3.12"
