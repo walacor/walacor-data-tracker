@@ -277,5 +277,3 @@ class WalacorClient:
 
         assert isinstance(result.UID[0], str)
         return result.UID[0]  # Walacor-minted
-
-    
