@@ -50,6 +50,12 @@ class PandasAdapter(BaseAdapter):
         "merge",
         "join",
         "set_axis",
+        "drop",
+        "astype",
+        "sort_values",
+        "explode",
+        "melt",
+        "reindex",
     ]
 
     # ------------------------------------------------------------------
