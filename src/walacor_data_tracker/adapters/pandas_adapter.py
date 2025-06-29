@@ -36,11 +36,9 @@ class PandasAdapter(BaseAdapter):
     # Configuration – keep this list small and focused!
     # ---------------------------------------------------------------------
     _DF_METHODS: list[str] = [
-        # creators that often run *inside* other ops
         "copy",
         "pivot_table",
         "reset_index",
-        # mutators / aggregators
         "__setitem__",
         "fillna",
         "dropna",
@@ -50,6 +48,12 @@ class PandasAdapter(BaseAdapter):
         "merge",
         "join",
         "set_axis",
+        "insert",
+        "astype",
+        "sort_values",
+        "reindex",
+        "explode",
+        "melt",       
     ]
 
     # ------------------------------------------------------------------
