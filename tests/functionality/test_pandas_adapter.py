@@ -1,9 +1,9 @@
 import pandas as pd
-import pandas as pd
 import pytest
 
-from walacor_data_tracker.core.tracker import Tracker
 from walacor_data_tracker.adapters.pandas_adapter import PandasAdapter
+from walacor_data_tracker.core.tracker import Tracker
+
 
 def test_init_creates_snapshot(tracker, pandas_adapter):
     df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
@@ -16,13 +16,12 @@ def test_init_creates_snapshot(tracker, pandas_adapter):
 
 
 def test_stop_unpatches_methods(tracker):
-    original_merge = pd.DataFrame.merge           
+    original_merge = pd.DataFrame.merge
     adapter = PandasAdapter().start(tracker)
-    assert pd.DataFrame.merge is not original_merge   
+    assert pd.DataFrame.merge is not original_merge
 
     adapter.stop()
     assert pd.DataFrame.merge is original_merge
-
 
 
 @pytest.fixture(scope="session")
@@ -45,11 +44,18 @@ def make_df() -> pd.DataFrame:
         }
     )
 
-def _assert_snapshot(tr, before_count: int, op_suffix: str, expected_shape: tuple[int, int]):
+
+def _assert_snapshot(
+    tr, before_count: int, op_suffix: str, expected_shape: tuple[int, int]
+):
     assert len(tr.history) == before_count + 1, "No snapshot created"
     snap = list(tr.history)[-1]
-    assert snap.operation.endswith(op_suffix), f"Expected operation to end with {op_suffix}, got {snap.operation}"
-    assert snap.shape == expected_shape, f"Shape mismatch: {snap.shape} vs {expected_shape}"
+    assert snap.operation.endswith(
+        op_suffix
+    ), f"Expected operation to end with {op_suffix}, got {snap.operation}"
+    assert (
+        snap.shape == expected_shape
+    ), f"Shape mismatch: {snap.shape} vs {expected_shape}"
 
 
 def test_copy_snapshot(tracker):
@@ -169,7 +175,7 @@ def test_setitem_snapshot(tracker):
     df = make_df()
     before = len(tracker.history)
 
-    df["new"] = df["a"].fillna(0) * 3  
+    df["new"] = df["a"].fillna(0) * 3
 
     _assert_snapshot(tracker, before, "__setitem__", df.shape)
     assert "new" in df.columns

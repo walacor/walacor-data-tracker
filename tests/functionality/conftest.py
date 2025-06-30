@@ -1,9 +1,8 @@
 import pytest
-import pandas as pd
 
-from walacor_data_tracker.core.tracker import Tracker
 from walacor_data_tracker.adapters import PandasAdapter
 from walacor_data_tracker.core.events import global_bus
+from walacor_data_tracker.core.tracker import Tracker
 
 
 @pytest.fixture(autouse=True)

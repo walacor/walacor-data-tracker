@@ -53,7 +53,7 @@ class PandasAdapter(BaseAdapter):
         "sort_values",
         "reindex",
         "explode",
-        "melt",       
+        "melt",
     ]
 
     # ------------------------------------------------------------------
