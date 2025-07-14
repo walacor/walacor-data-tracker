@@ -96,7 +96,7 @@ from walacor_data_tracker.writers.walacor import WalacorWriter
 # 1️⃣  Start tracking
 tracker = Tracker().start()
 PandasAdapter().start(tracker)        # auto-captures every DataFrame op
-ConsoleWriter().start(tracker)        # (optional) printf lineage to stdout
+ConsoleWriter().start()        # (optional) printf lineage to stdout
 
 # 2️⃣  Open a Walacor run in one line
 wal_writer = WalacorWriter(
