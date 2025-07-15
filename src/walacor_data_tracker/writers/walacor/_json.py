@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from typing import Any, cast
-
-import pandas as pd
+from typing import Any
 
 JsonPrimitive = str | int | float | bool | None
 JsonType = JsonPrimitive | list["JsonType"] | dict[str, "JsonType"]
 
 
-def jsonify(obj):
+def jsonify(obj: Any) -> JsonType:
+
     if isinstance(obj, (str, int, float, bool)) or obj is None:
         return obj
 
@@ -22,5 +20,4 @@ def jsonify(obj):
     if isinstance(obj, (list, tuple, set)):
         return [jsonify(v) for v in obj]
 
-    # fallback for objects that don’t match the above
     return str(obj)
